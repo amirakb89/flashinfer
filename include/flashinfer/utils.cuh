@@ -45,6 +45,11 @@
 #ifndef FLASHINFER_ALWAYS_DISALLOW_FP16_QK_REDUCTION
 #define FLASHINFER_ALWAYS_DISALLOW_FP16_QK_REDUCTION 0
 #endif
+#if defined(__HIPCC__) || (defined(__clang__) && defined(__HIP__)) || defined(__HIPCC_RTC__)
+static constexpr int MAX_STAGES_SMEM = 1;
+#elif defined(__CUDACC__) || defined(__NVCC__) || (defined(__clang__) && defined(__CUDA__)) || defined(__CUDACC_RTC__)
+static constexpr int MAX_STAGES_SMEM = 2;
+#endif
 
 #ifndef NDEBUG
 #define FLASHINFER_CUDA_CALL(func, ...)                                                    \
@@ -265,7 +270,7 @@
 
 #define DISPATCH_COMPUTE_CAP_DECODE_NUM_STAGES_SMEM(compute_capacity, NUM_STAGES_SMEM, ...) \
   if (compute_capacity.first >= 8) {                                                        \
-    constexpr uint32_t NUM_STAGES_SMEM = 1;                                                 \
+    constexpr uint32_t NUM_STAGES_SMEM = MAX_STAGES_SMEM;                                                 \
     __VA_ARGS__                                                                             \
   } else {                                                                                  \
     constexpr uint32_t NUM_STAGES_SMEM = 1;                                                 \
