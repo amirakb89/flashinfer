@@ -726,7 +726,7 @@ cudaError_t BatchDecodeWithPagedKVCacheDispatched(Params params, typename Params
   static_assert(bdx <= 32);
   DISPATCH_GQA_GROUP_SIZE(num_qo_heads / num_kv_heads, GROUP_SIZE, {
     constexpr uint32_t bdy = GROUP_SIZE;
-    constexpr uint32_t num_threads = std::max(128U, bdx * bdy);
+    constexpr uint32_t num_threads = std::max(192U, bdx * bdy);
     constexpr uint32_t bdz = num_threads / (bdx * bdy);
     constexpr uint32_t tile_size_per_bdx = GROUP_SIZE == 1 ? (sizeof(DTypeKV) == 1 ? 2U : 4U) : 1U;
     DISPATCH_COMPUTE_CAP_DECODE_NUM_STAGES_SMEM(compute_capacity, NUM_STAGES_SMEM, {
