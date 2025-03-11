@@ -566,7 +566,6 @@ __global__ void BatchDecodeWithPagedKVCacheKernel(const __grid_constant__
    DTypeKV* gptr_k[tile_size_per_bdx];
    DTypeKV* gptr_v[tile_size_per_bdx];
 
-    vec_t<float, vec_size> k_vec, v_vec;
     #pragma unroll
     for (uint32_t j = 0; j < tile_size_per_bdx; ++j) {
       kv_offset[j] = kv_offset_smem[((((iter + num_stages_smem) % bdx) * bdz + tz) * bdy + ty) *
@@ -577,22 +576,17 @@ __global__ void BatchDecodeWithPagedKVCacheKernel(const __grid_constant__
                      gptr_v[j] =  paged_kv.v_data+ kv_offset[j];
     }
 
-    uint4 load_vals[tile_size_per_bdx];
+    uint  load_vals[tile_size_per_bdx];
 #endif
     // load k tiles
 #if defined(__HIPCC__) || (defined(__clang__) && defined(__HIP__)) || defined(__HIPCC_RTC__)
   #pragma unroll 4
       for (uint32_t j = 0; j < tile_size_per_bdx; ++j) {
 
-        const uint4* gmem_ptr = reinterpret_cast<const uint4*>(gptr_k[j]);
+        const uint * gmem_ptr = reinterpret_cast<const uint *>(gptr_k[j]);
 
-        bool predicate = (((iter + num_stages_smem) * bdz + tz) * bdy + ty) * tile_size_per_bdx + j < chunk_size;
-        if (predicate){
-          load_vals[j] = *((uint4*)gptr_k[j]);
+          load_vals[j] = *((uint *)gptr_k[j]);
 
-        }else{
-          load_vals[j] = make_uint4(0, 0, 0, 0);
-        }
 
       }
 
@@ -600,13 +594,14 @@ __global__ void BatchDecodeWithPagedKVCacheKernel(const __grid_constant__
     #pragma unroll 4
     for (uint32_t j = 0; j < tile_size_per_bdx; ++j) {
       int index = (((stage_idx * bdz + tz) * bdy + ty) * tile_size_per_bdx + j) * head_dim + tx * vec_size;
-      uint4* smem_ptr =  (uint4*) (k_smem + index);
+      uint * smem_ptr =  (uint *) (k_smem + index);
       bool predicate = (((iter + num_stages_smem) * bdz + tz) * bdy + ty) * tile_size_per_bdx + j < chunk_size;
       if (predicate){
-        *((uint4*)smem_ptr) = load_vals[j];
+        *((uint *)smem_ptr) = load_vals[j];
       }
       else{
-        *((uint4*)smem_ptr)=make_uint4(0, 0, 0, 0);
+        //*((uint4*)smem_ptr)=make_uint4(0, 0, 0, 0);
+        *((uint*)smem_ptr) = 0;
       }
     }
 #else
@@ -633,25 +628,20 @@ __global__ void BatchDecodeWithPagedKVCacheKernel(const __grid_constant__
 #if defined(__HIPCC__) || (defined(__clang__) && defined(__HIP__)) || defined(__HIPCC_RTC__)
 #pragma unroll tile_size_per_bdx
     for (uint32_t j = 0; j < tile_size_per_bdx; ++j) {
-        bool predicate = (((iter + num_stages_smem) * bdz + tz) * bdy + ty) * tile_size_per_bdx + j < chunk_size;
-        if (predicate){
-          load_vals[j] = *((uint4*)gptr_v[j]);
-
-        }else{
-          load_vals[j] = make_uint4(0, 0, 0, 0);
-        }
-
+          load_vals[j] = *((uint*)gptr_v[j]);
+        
     }
 #pragma unroll tile_size_per_bdx
     for (uint32_t j = 0; j < tile_size_per_bdx; ++j) {
       bool predicate = (((iter + num_stages_smem) * bdz + tz) * bdy + ty) * tile_size_per_bdx + j < chunk_size;
       int index = (((stage_idx * bdz + tz) * bdy + ty) * tile_size_per_bdx + j) * head_dim + tx * vec_size;
-      uint4* smem_ptr =  (uint4*) (v_smem + index);
+      uint* smem_ptr =  (uint*) (v_smem + index);
       if (predicate){
-        *((uint4*)smem_ptr) = load_vals[j];
+        *((uint*)smem_ptr) = load_vals[j];
       }
       else{
-        *((uint4*)smem_ptr)=make_uint4(0, 0, 0, 0);
+        //*((uint4*)smem_ptr)=make_uint4(0, 0, 0, 0);
+        *((uint*)smem_ptr) = 0;
       }
 
     }
@@ -829,7 +819,7 @@ gpuError_t BatchDecodeWithPagedKVCacheDispatched(typename AttentionVariant::Para
   const uint32_t padded_batch_size = params.padded_batch_size;
 
 #if defined(__HIPCC__) || (defined(__clang__) && defined(__HIP__)) || defined(__HIPCC_RTC__)
-  constexpr uint32_t temp_1st = 16UL / sizeof(DTypeKV);
+  constexpr uint32_t temp_1st = 4UL / sizeof(DTypeKV);
   constexpr uint32_t temp_2nd = HEAD_DIM / 32UL;
   constexpr uint32_t vec_size = temp_1st < temp_2nd ? temp_2nd : temp_1st;
 #else
