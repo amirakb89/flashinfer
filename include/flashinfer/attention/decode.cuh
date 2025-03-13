@@ -914,7 +914,7 @@ gpuError_t BatchDecodeWithPagedKVCacheDispatched(typename AttentionVariant::Para
   DISPATCH_GQA_GROUP_SIZE(num_qo_heads / num_kv_heads, GROUP_SIZE, {
     constexpr uint32_t bdy = GROUP_SIZE;
 #if defined(__HIPCC__) || (defined(__clang__) && defined(__HIP__)) || defined(__HIPCC_RTC__)
-    constexpr uint32_t num_threads = (GROUP_SIZE == 6) ? 192U : (128U < bdx * bdy ? bdx * bdy : 128U);
+    constexpr uint32_t num_threads = (GROUP_SIZE >= 6) ? (256U < bdx * bdy ? bdx * bdy : 256U) : (128U < bdx * bdy ? bdx * bdy : 128U);
 #else
     constexpr uint32_t num_threads = std::max(128U, bdx * bdy);
 #endif
