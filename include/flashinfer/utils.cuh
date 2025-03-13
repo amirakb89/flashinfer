@@ -148,6 +148,9 @@ static constexpr int MAX_STAGES_SMEM = 2;
   } else if (group_size == 4) {                              \
     constexpr size_t GROUP_SIZE = 4;                         \
     __VA_ARGS__                                              \
+  } else if (group_size == 6) {                              \
+    constexpr size_t GROUP_SIZE = 4;                         \
+    __VA_ARGS__                                              \
   } else if (group_size == 8) {                              \
     constexpr size_t GROUP_SIZE = 8;                         \
     __VA_ARGS__                                              \
